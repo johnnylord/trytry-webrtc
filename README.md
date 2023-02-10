@@ -12,6 +12,16 @@
 ```bash
 $ ./install.sh
 ```
+- Upgrade ffmpeg
+```bash
+$ sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+$ sudo apt update
+$ sudo apt upgrade ffmpeg
+```
+- Upgrade libavcodec-dev
+```bash
+$ sudo apt upgrade libavcodec-dev
+```
 - Install Python packages
 ```bash
 $ python3 -m pip install -r requirements.txt
