@@ -12,15 +12,13 @@
 ```bash
 $ ./install.sh
 ```
-- Upgrade ffmpeg
+- Upgrade ffmpeg & libavcodec-dev
 ```bash
+# Issue: https://github.com/jdgalviss/jetbot-ros2/issues/6#issuecomment-932993554
 $ sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 $ sudo apt update
-$ sudo apt upgrade ffmpeg
-```
-- Upgrade libavcodec-dev
-```bash
-$ sudo apt upgrade libavcodec-dev
+$ sudo apt upgrade -y ffmpeg
+$ sudo apt upgrade -y libavcodec-dev
 ```
 - Install Python packages
 ```bash
