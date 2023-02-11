@@ -1,5 +1,8 @@
 # trytry-webrtc
 
+This repo demonstrates how to use WebRTC to perform real-time AI processing on streaming video. Check the following diagram to know the overall architecture.
+![arch.png](imgs/arch.png)
+
 ## Environment
 ```
 - Linux pc 5.4.0-137-generic #154~18.04.1-Ubuntu SMP Tue Jan 10 16:58:20 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
