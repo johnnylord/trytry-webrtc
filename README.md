@@ -33,7 +33,7 @@ python3 -m pip install -r requirements.txt
 ```bash
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 /opt/janus/bin/janus
 ```
-2. WebRTC media publisher
+2. WebRTC media publisher (Stream the webcam video to the janus webrtc server)
 ```bash
 python3 publisher.py \
     --url http://localhost:8088/janus \
@@ -41,14 +41,14 @@ python3 publisher.py \
     --name raw \
     --dev /dev/video0
 ```
-3. WebRTC media processor
+3. WebRTC media processor (Fetch the raw streaming video on the janus server and perform AI processing. Then stream the processed video to the janus webrtc server)
 ```bash
 python3 processor.py \
     --url http://localhost:8088/janus \
     --room 1234 \
     --name facedet
 ```
-4. WebRTC media recorder
+4. WebRTC media recorder (Record the streaming videos into mpeg4 files on the janus server)
 ```bash
 python3 recorder.py \
     --url http://localhost:8088/janus \
