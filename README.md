@@ -51,3 +51,10 @@ python3 recorder.py \
     --url http://localhost:8088/janus \
     --room 1234
 ```
+
+## Replay the recorded videos
+```bash
+ffplay -f lavfi \
+"movie='raw.mp4',scale=iw/2:ih[v0];movie='facedet.mp4',scale=iw/2:ih[v1];[v0][v1]hstack"
+```
+![demo](imgs/demo.png)
