@@ -10,31 +10,44 @@
 ## Setup Environment
 - Install Janus webrtc server
 ```bash
-$ ./install.sh
+./install.sh
 ```
 - Upgrade ffmpeg & libavcodec-dev
 ```bash
 # Issue: https://github.com/jdgalviss/jetbot-ros2/issues/6#issuecomment-932993554
-$ sudo add-apt-repository ppa:jonathonf/ffmpeg-4
-$ sudo apt update
-$ sudo apt upgrade -y ffmpeg
-$ sudo apt upgrade -y libavcodec-dev
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+sudo apt update
+sudo apt upgrade -y ffmpeg
+sudo apt upgrade -y libavcodec-dev
 ```
 - Install Python packages
 ```bash
-$ python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
-## Video Streaming Example
+## How to run
 1. Start the janus webrtc server
 ```bash
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 /opt/janus/bin/janus
 ```
 2. WebRTC media publisher
 ```bash
-$ python3 janus.py http://localhost:8088/janus
+python3 publisher.py \
+    --url http://localhost:8088/janus \
+    --room 1234 \
+    --name raw \
+    --dev /dev/video0
 ```
-3. WebRTC media subscriber
+3. WebRTC media processor
 ```bash
-$ python3 janus.py http://localhost:8088/janus --record-to test.mp4
+python3 processor.py \
+    --url http://localhost:8088/janus \
+    --room 1234 \
+    --name facedet
+```
+4. WebRTC media recorder
+```bash
+python3 recorder.py \
+    --url http://localhost:8088/janus \
+    --room 1234
 ```
