@@ -15,6 +15,15 @@ This repo demonstrates how to use WebRTC to perform real-time AI processing on s
 ```bash
 ./install.sh
 ```
+If the installation fails nad the root cause is because of "srtp not found". Please modify the script `scripts/install_libsrtp.sh` as following:
+```
+# Comment this line
+./configure --prefix=/usr --libdir=/usr/lib64 --enable-openssl
+
+# Add this line
+./configure --prefix=/usr --enable-openssl
+```
+
 - Upgrade ffmpeg & libavcodec-dev
 ```bash
 # Issue: https://github.com/jdgalviss/jetbot-ros2/issues/6#issuecomment-932993554
