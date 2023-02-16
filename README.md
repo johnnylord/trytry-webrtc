@@ -15,15 +15,6 @@ This repo demonstrates how to use WebRTC to perform real-time AI processing on s
 ```bash
 ./install.sh
 ```
-If the installation fails nad the root cause is because of "srtp not found". Please modify the script `scripts/install_libsrtp.sh` as following:
-```
-# Comment this line
-./configure --prefix=/usr --libdir=/usr/lib64 --enable-openssl
-
-# Add this line
-./configure --prefix=/usr --enable-openssl
-```
-
 - Upgrade ffmpeg & libavcodec-dev
 ```bash
 # Issue: https://github.com/jdgalviss/jetbot-ros2/issues/6#issuecomment-932993554
@@ -40,7 +31,7 @@ python3 -m pip install -r requirements.txt
 ## How to run
 1. Start the janus webrtc server
 ```bash
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 /opt/janus/bin/janus
+/opt/janus/bin/janus
 ```
 2. WebRTC media publisher (Stream the webcam video to the janus webrtc server)
 ```bash
