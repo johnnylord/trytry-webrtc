@@ -12,7 +12,7 @@ from utils.janus import JanusSession
 
 async def record(session, room, feed, path):
     pc = session.createRTCPeerConnection('subscriber')
-    sink = MediaRecorder(path)
+    sink = MediaRecorder(path, options={ 'fflags': 'nobuffer'})
 
     @pc.on("track")
     async def on_track(track):

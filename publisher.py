@@ -77,7 +77,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     session = JanusSession(args['url'])
-    player = MediaPlayer(args['dev'])
+    player = MediaPlayer(args['dev'], format='v4l2', options={ 'fflags': 'nobuffer' })
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(
@@ -91,4 +91,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     finally:
+
         loop.run_until_complete(session.destroy())
