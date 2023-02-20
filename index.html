@@ -2,26 +2,78 @@
   <head></head>
 
   <body>
-    <script src="/js/client.js"></script>
+
+    <script src="/js/janus.js"></script>
     <script>
+
+      const roomID = 1234;
+      const janusUrl = 'http://localhost:8088/janus';
+      const janusPlugin = 'janus.plugin.videoroom';
+
+      var sessionUrl = null;
+      var subsriberID = null;
+      var handlerID = null;
+      var publishers = {};
+      var clients = {};
+
+      async function eventHandler(queues, plugins) {
+        for (const [plugin_id, name] of Object.entries(plugins)) {
+          let queue = queues[plugin_id];
+
+          // Handle Video Room Plugin Events
+          if (queue.length && name == 'janus.plugin.videoroom') {
+            let event = queue.shift();
+
+            // Handle Joined Event
+            if (event.plugindata.data.videoroom == 'joined') {
+              let pubs = event.plugindata.data.publishers;
+              for (let i=0; i<pubs.length; i++) {
+                pub = pubs[i];
+                publishers[pub.id] = { display: pub.display };
+
+                let media = createMediaComponent(pub.id, pub.display);
+                      document.body.appendChild(media);
+                const pluginUrl = await attachPlugin(sessionUrl, janusPlugin);
+
+                await createMediaClient(pluginUrl, media);
+              }
+
+            // Handle Leaving Event
+            } else if ('leaving' in event.plugindata.data) {
+              id = event.plugindata.data.leaving;
+
+            // Handle Publish Event
+            } else if ('publishers' in event.plugindata.data) {
+              let pubs = event.plugindata.data.publishers;
+              for (let i=0; i<pubs.length; i++) {
+                pub = pubs[i];
+                publishers[pub.id] = { display: pub.display };
+              }
+            }
+          }
+        }
+      }
+
       async function main() {
-        const roomID = 1234;
-        const janusUrl = 'http://localhost:8088/janus';
 
         // Establish connection to Janus Gateway Video Room Pluin
-        const sessionUrl = await createSession(janusUrl);
-        const pluginUrl = await attachPlugin(sessionUrl, 'janus.plugin.videoroom');
+        sessionUrl = await createSession(janusUrl);
+        const pluginUrl = await attachPlugin(sessionUrl, janusPlugin);
+
+        // Start event subscriber to keep fetching plugin event data
+        subsriberID = setInterval(janusEventSubscriber, 100, sessionUrl);
 
         // Join the Video Room of ID 1234
-        body = {
-          display: 'recorder',
+        const body = {
+          display: 'browser',
           request: 'join',
           ptype: 'publisher',
           room: roomID
         };
-        data = await sendPluginPOST(pluginUrl, body);
+        await sendPluginPOST(pluginUrl, body);
 
-        console.log(data);
+        // Start event handler to process event data stored in event queues
+        handlerID = setInterval(eventHandler, 500, getPluginEventQueue(), getPluginIDs());
       }
 
       main();
