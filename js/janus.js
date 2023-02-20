@@ -19,6 +19,7 @@ function getPluginName(id) {
 function createMediaComponent(id, name) {
   let div = document.createElement('div');
   div.setAttribute('id', id);
+  div.setAttribute('class', 'col-6');
 
   let h2 = document.createElement('h2');
   h2.setAttribute('id', `${id}_name`);
@@ -169,7 +170,7 @@ async function sendPluginMessage(pluginUrl, data) {
 
   // Wait for polled event data matched with the requested transaction ID
   let elapsed = 0;
-  while (elapsed < 1000) {
+  while (elapsed < 10000) {
     // Check for recently got event data
     let event = eventQueue.shift();
 
@@ -189,28 +190,39 @@ async function sendPluginMessage(pluginUrl, data) {
   throw new Error("Fail to get responed event data within 500 msec");
 }
 
-async function startJanusEventSubscriber(sessionUrl) {
+function startJanusEventSubscriber(sessionUrl) {
   // Fetch one event for each request (maxev => max event)
   const params = { maxev: '1' };
   const pollUrl = _janus_join_url_params(sessionUrl, params);
 
-  // Send GET request
-  let response = await fetch(pollUrl, { method: 'GET' });
-  let data = await response.json();
+  async function longPoll() {
+    while (true) {
+    try {
+      // Send GET request
+      const response = await fetch(pollUrl, { method: 'GET' });
+      if (response.status === 200) {
+        const data = await response.json();
+        // Response check
+        if (data['janus'] == 'event') {
+          // Push the event data into the plugin-specific event queue
+          if (data['sender'] in pluginQueues) {
+            queue = pluginQueues[String(data['sender'])];
+            queue.push(data);
 
-  // Response check
-  if (data['janus'] == 'event') {
-    // Push the event data into the plugin-specific event queue
-    if (data['sender'] in pluginQueues) {
-      queue = pluginQueues[String(data['sender'])];
-      queue.push(data);
-
-      // Mirror the event data to the plugin-agnostic event queue
-      // We use this queue to receive the associated responded
-      // event data in sendPluginMessage function.
-      eventQueue.push(data);
+            // Mirror the event data to the plugin-agnostic event queue
+            // We use this queue to receive the associated responded
+            // event data in sendPluginMessage function.
+            eventQueue.push(data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error while polling:', error);
+    }
     }
   }
+
+  longPoll();
 }
 
 async function createMediaPeer(pluginUrl, media, roomID, publisherID) {
@@ -252,7 +264,6 @@ async function createMediaPeer(pluginUrl, media, roomID, publisherID) {
     }
   };
   let response = await sendPluginMessage(pluginUrl, data);
-  console.log(response);
   let desc = new RTCSessionDescription(response['jsep']);
   await pc.setRemoteDescription(desc);
 
