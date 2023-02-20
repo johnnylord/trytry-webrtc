@@ -4,17 +4,46 @@ var pluginQueues = {};
 var pluginID2Name = {};
 
 // Exported functions
-function getPluginQueue(name) {
-  return pluginQueues[name];
+function getPluginQueues() {
+  return pluginQueues;
+}
+
+function getPluginQueue(pluginID) {
+  return pluginQueues[pluginID];
 }
 
 function getPluginName(id) {
   return pluginID2Name[id];
 }
 
+function createMediaComponent(id, name) {
+  let div = document.createElement('div');
+  div.setAttribute('id', id);
+
+  let h2 = document.createElement('h2');
+  h2.setAttribute('id', `${id}_name`);
+  h2.innerHTML = name;
+
+  let audio = document.createElement('audio');
+  audio.setAttribute('id', `${id}_audio`);
+  audio.setAttribute('autoplay', 'true');
+
+  let video = document.createElement('video');
+  video.setAttribute('id', `${id}_video`);
+  video.muted = true; // You need to mute the video to make the video element show the screen
+  video.autoplay = true;
+  video.playsInline = true;
+
+  div.appendChild(h2);
+  div.appendChild(audio);
+  div.appendChild(video);
+
+  return div;
+}
+
 // Helper functions
 function _janus_msleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function _janus_random_trans_id(){
@@ -31,19 +60,21 @@ function _janus_random_trans_id(){
 }
 
 function _janus_join_url(base, token) {
+  let url = ""
   if (base.substr(-1) != '/')
-    let url = base + '/';
+    url = base + '/';
   else
-    let url = base;
+    url = base;
 
   return url + String(token);
 }
 
 function _janus_join_url_params(base, params) {
+  let url = "";
   if (base.substr(-1) != '/')
-    let url = base + '/';
+    url = base + '/';
   else
-    let url = base;
+    url = base;
 
   let count = 0;
   for (const [key, value] of Object.entries(params)) {
@@ -52,6 +83,7 @@ function _janus_join_url_params(base, params) {
     else
       url += `&${key}=${value}`;
     count += 1;
+  }
 
   return url;
 }
@@ -59,8 +91,8 @@ function _janus_join_url_params(base, params) {
 // Exported Asynchronized Functions
 async function createJanusSession(janusUrl) {
   const msg = {
-    'janus': 'create',
-    'transaction': _janus_random_trans_id(),
+    janus: 'create',
+    transaction: _janus_random_trans_id(),
   }
 
   // Create janus session handle
@@ -79,7 +111,7 @@ async function createJanusSession(janusUrl) {
   const sessionID = data['data']['id']
   const sessionUrl = _janus_join_url(janusUrl, sessionID);
 
-  return sessionUrl
+  return sessionUrl;
 }
 
 async function attachJanusPlugin(sessionUrl, pluginName) {
@@ -121,13 +153,14 @@ async function sendPluginMessage(pluginUrl, data) {
   // Update message with plugin specific data
   for (const [key, value] of Object.entries(data)) {
     msg[key] = value;
+  }
 
   // Send Message to specified plugin handle
   let response = await fetch(pluginUrl, {
     method: 'POST',
     body: JSON.stringify(msg)
   });
-  let data = await response.json();
+  data = await response.json();
 
   // Response check
   if (data['janus'] != 'ack') {
@@ -136,11 +169,13 @@ async function sendPluginMessage(pluginUrl, data) {
 
   // Wait for polled event data matched with the requested transaction ID
   let elapsed = 0;
-  while (elapsed < 500) {
+  while (elapsed < 1000) {
     // Check for recently got event data
     let event = eventQueue.shift();
+
     if (
-      'transaction' in event
+      event
+      && 'transaction' in event
       && event.transaction == msg.transaction
     )
       return event;
@@ -154,91 +189,85 @@ async function sendPluginMessage(pluginUrl, data) {
   throw new Error("Fail to get responed event data within 500 msec");
 }
 
-async function janusEventSubscriber(sessionUrl) {
-
+async function startJanusEventSubscriber(sessionUrl) {
+  // Fetch one event for each request (maxev => max event)
   const params = { maxev: '1' };
   const pollUrl = _janus_join_url_params(sessionUrl, params);
 
-  response = await fetch(pollUrl, { method: 'GET' });
-  data = await response.json();
+  // Send GET request
+  let response = await fetch(pollUrl, { method: 'GET' });
+  let data = await response.json();
 
+  // Response check
   if (data['janus'] == 'event') {
+    // Push the event data into the plugin-specific event queue
     if (data['sender'] in pluginQueues) {
       queue = pluginQueues[String(data['sender'])];
       queue.push(data);
+
+      // Mirror the event data to the plugin-agnostic event queue
+      // We use this queue to receive the associated responded
+      // event data in sendPluginMessage function.
       eventQueue.push(data);
     }
   }
-
 }
 
+async function createMediaPeer(pluginUrl, media, roomID, publisherID) {
+  // Arguments:
+  //  - pluginUrl: specific plugin handler for the media client (peer connection)
+  //  - media: html media component with audio and video elements in it
+  //  - roomID: janus room identifier
+  //  - publisherID: identifier of remote publisher
 
-async function createMediaClient(pluginUrl, media) {
+  // Peer connection configuration
   const config = {
-    sdpSemantics: 'unified-plan',
     iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
   };
 
+  // Create peer connection instance
   let pc = new RTCPeerConnection(config);
 
-  // Attach event listener for available tracks (audio/video)
+  // Register callbacks for the peer connection instance
   pc.addEventListener('track', function(evt) {
+    // Update html elements
     if (evt.track.kind == 'video') {
-      console.log(evt);
       let video = document.getElementById(`${media.id}_video`);
-      console.log(video);
       video.srcObject = evt.streams[0];
-    } else {
-      console.log(evt);
+    } else if (evt.track.kind == 'audio') {
       let audio = document.getElementById(`${media.id}_audio`);
       audio.srcObject = evt.streams[0];
+    } else {
+      throw new Error(`Unrecognized track of type ${evt.track.kind}`);
     }
   });
 
-  pc.addTransceiver('video', {direction: 'recvonly'});
-  pc.addTransceiver('audio', {direction: 'recvonly'});
-
-  // Request for SDP information of the publisher (feed)
-  body = {
-    ptype: 'subscriber',
-    request: 'join',
-    room: roomID,
-    feed: pub.id,
+  // Request for SDP information from the Janus
+  let data = {
+    body: {
+      ptype: 'subscriber',
+      request: 'join',
+      room: roomID,
+      feed: publisherID,
+    }
   };
-  data = await sendPluginMessage(pluginUrl, body);
-  description = new RTCSessionDescription(data['jsep']);
+  let response = await sendPluginMessage(pluginUrl, data);
+  console.log(response);
+  let desc = new RTCSessionDescription(response['jsep']);
+  await pc.setRemoteDescription(desc);
 
-  await pc.setRemoteDescription(description);
-  await pc.setLocalDescription(await pc.createAnswer())
+  // Respond local SDP information to the Janus
+  await pc.setLocalDescription(await pc.createAnswer());
 
-  console.log(pc.localDescription);
-  body = { request: 'start' }
-  jsep = { sdp: pc.localDescription.sdp, type: pc.localDescription.type };
-  data = await sendPluginMessage(pluginUrl, body, jsep);
+  data = {
+    body: { request: 'start' },
+    jsep: {
+      sdp: pc.localDescription.sdp,
+      type: pc.localDescription.type,
+      trickle: false,
+    }
+  };
 
-  console.log(data);
-}
-
-function createMediaComponent(id, name) {
-  let div = document.createElement('div');
-  div.setAttribute('id', id);
-
-  let h2 = document.createElement('h2');
-  h2.setAttribute('id', `${id}_name`);
-  h2.innerHTML = name;
-
-  let audio = document.createElement('audio');
-  audio.setAttribute('id', `${id}_audio`);
-  audio.setAttribute('autoplay', 'true');
-
-  let video = document.createElement('video');
-  video.setAttribute('id', `${id}_video`);
-  video.setAttribute('autoplay', 'true');
-  video.setAttribute('playsinline', 'true');
-
-  div.appendChild(h2);
-  div.appendChild(audio);
-  div.appendChild(video);
-
-  return div;
+  response = await sendPluginMessage(pluginUrl, data);
+  return pc;
 }
