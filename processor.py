@@ -6,7 +6,7 @@ import argparse
 from aiortc import RTCSessionDescription, VideoStreamTrack
 from aiortc.contrib.media import MediaBlackhole
 
-from utils.processor import get_processor_by_name
+from utils.processor import get_processor_by_name, get_processer_names
 from utils.janus import JanusSession
 
 
@@ -133,7 +133,7 @@ async def main(session, room, name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="janus subscriber")
     parser.add_argument("--url", help="url of janus http server, e.g. http://localhost:8088/janus")
-    parser.add_argument("--name", type=str, choices=['facedet'], default='facedet', help="name of processor")
+    parser.add_argument("--name", type=str, choices=get_processer_names(), default='facedet', help="name of processor")
     parser.add_argument("--room", type=int, default=1234, help="ID of video room to join")
     args = vars(parser.parse_args())
 
