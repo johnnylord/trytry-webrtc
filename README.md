@@ -54,6 +54,12 @@ python3 recorder.py \
     --url http://localhost:8088/janus \
     --room 1234
 ```
+5. Display realtime streaming videos on the browser
+```bash
+python3 -m http.server
+
+# Visit http://localhost:8000/
+```
 
 ## Replay the recorded videos
 ```bash
